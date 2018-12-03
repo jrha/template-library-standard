@@ -11,17 +11,18 @@ variable REE_PROFILE = <<EOF;
 export PATH=/opt/ree/bin:$PATH
 EOF
 
-include {'components/filecopy/config'};
-"/software/components/filecopy/services" = if (index("ree-passenger",WEB_SERVER_MODULES) != -1 ) {
-  npush(escape("/etc/httpd/conf.d/passenger.conf"), nlist(
-    "config",REE_PASSENGER_CONF,
-    "perms", "0644",
-    "restart","passenger-install-apache2-module -a",
-  ),
-  escape("/etc/profile.d/ruby-enterprise.sh"), nlist(
-    "config",REE_PROFILE,
-    "perms", "0755",
-  ));
+include 'components/filecopy/config';
+
+"/software/components/filecopy/services" = if (index("ree-passenger", WEB_SERVER_MODULES) != -1 ) {
+    npush(escape("/etc/httpd/conf.d/passenger.conf"), dict(
+        "config", REE_PASSENGER_CONF,
+        "perms", "0644",
+        "restart", "passenger-install-apache2-module -a",
+    ),
+    escape("/etc/profile.d/ruby-enterprise.sh"), dict(
+        "config", REE_PROFILE,
+        "perms", "0755",
+    ));
 } else {
-  SELF;
+    SELF;
 };

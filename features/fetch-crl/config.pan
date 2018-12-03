@@ -30,7 +30,7 @@ include 'quattor/functions/package';
 # Exit with an error if an older version is used.
 prefix '/software/components/metaconfig/services/{/etc/sysconfig/fetch-crl}';
 variable CHECK_VERSION = if ( !exists('/software/components/metaconfig/version') ||
-(pkg_compare_version(value('/software/components/metaconfig/version'), '16.6.0') == PKG_VERSION_LESS ) ) {
+    (pkg_compare_version(value('/software/components/metaconfig/version'), '16.6.0') == PKG_VERSION_LESS ) ) {
     error('fetch-crl configuration requires ncm-metaconfig version >= 16.6.0');
 };
 'backup' = '.old';
@@ -56,8 +56,8 @@ include 'components/cron/config';
 "/software/components/cron/entries" = {
     if (FETCH_CRL_VERSION < '3.0') {
         cron_cmd = '/usr/sbin/fetch-crl  --no-check-certificate --loc ' + SITE_DEF_CERTDIR + ' -out ' + SITE_DEF_CERTDIR + ' -a 24 --quiet';
-        append(dict("name","fetch-crl-cron",
-            "user","root",
+        append(dict("name", "fetch-crl-cron",
+            "user", "root",
             "frequency", "AUTO 3,9,15,21 * * *",
             "command", cron_cmd,
         ));
@@ -102,12 +102,12 @@ include 'components/altlogrotate/config';
     if (FETCH_CRL_VERSION >= '3.0') {
         # Run fetch-crl on boot
         SELF[escape('fetch-crl-boot')] = dict("on", "",
-            "startstop", true);
+        "startstop", true);
     };
 
     # Enable periodic fetch-crl (cron)
     SELF[escape('fetch-crl-cron')] = dict("on", "",
-        "startstop", true);
+    "startstop", true);
 
     SELF;
 };

@@ -1,4 +1,3 @@
 unique template features/hepixvmilsubscriber/config;
 
-include { 'features/hepixvmilsubscriber/rpms' };
-
+include 'features/hepixvmilsubscriber/rpms';

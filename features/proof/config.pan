@@ -14,7 +14,7 @@ variable PROOF_SOCKET_DIR ?= undef;
 # Define default values for others.                         #
 #############################################################
 
-include { PROOF_CONFIG_SITE };
+include PROOF_CONFIG_SITE;
 
 variable XROOTD_INSTALLATION_DIR ?= error('XROOTD_INSTALLATION_DIR not defined in site configuration: no default.');
 variable XROOTD_CONFIG_FILE ?= error('XROOTD_CONFIG_FILE not defined in site configuration: no default.');
@@ -34,132 +34,20 @@ variable PROOF_WORKER_NODES ?= error('PROOF_WORKER_NODES must be defined to buil
 # Create startup script #
 #########################
 
-variable PROOF_STARTUP_CONTENTS ?= <<EOF;
-#! /bin/sh
-#
-# xrootd    Start/Stop the XROOTD daemon
-#
-# chkconfig: 345 99 0
-# description: The xrootd daemon is used to as file server and starter of
-#              the PROOF worker processes.
-#
-# processname: xrootd
-# pidfile: /var/run/xrootd.pid
-# config:
-
-XROOTD=/opt/root/bin/xrootd
-XRDLIBS=/opt/root/lib
-XRDLOG=/var/log/xroot.log
-
-# Source function library.
-. /etc/init.d/functions
-
-# Get config.
-. /etc/sysconfig/network
-
-# Get xrootd config
-[ -f  /etc/sysconfig/xrootd ] && . /etc/sysconfig/xrootd
-
-# Read user config
-[ ! -z "$XRDUSERCONFIG" ] && [ -f "$XRDUSERCONFIG" ] && . $XRDUSERCONFIG
-
-# Check that networking is up.
-if [ ${NETWORKING} = "no" ]
-then
-    exit 0
-fi
-
-if [ ! -x $XROOTD ]
-then
-    echo "Xrootd daemon not found ($XROOTD)"
-    exit 4
-fi
-
-RETVAL=0
-prog="xrootd"
-
-export DAEMON_COREFILE_LIMIT=unlimited
-
-start() {
-    echo -n $"Starting $prog: "
-    # Options are specified in /etc/sysconfig/xrootd .
-    # See $ROOTSYS/etc/daemons/xrootd.sysconfig for an example.
-    # $XRDUSER *must* be the name of an existing non-privileged user.
-    if [ -z "$XRDUSER" ]
-    then
-        echo "XRDUSER must be defined in site configuration. Aborting"
-        RETVAL=5
-        return $RETVAL
-    fi
-    # $XRDCF must be the name of the xrootd configuration file
-    if [ -z "$XRDCF" ]
-    then
-        echo "XRDCF must be defined in site configuration. Aborting"
-        RETVAL=5
-        return $RETVAL
-    fi
-    export LD_LIBRARY_PATH=$XRDLIBS:$LD_LIBRARY_PATH
-    # Set xrootd log file to be writable by XRDUSER
-    touch $XRDLOG
-    chown $XRDUSER $XRDLOG
-    # limit on 1 GB resident memory, and 2 GB virtual memory
-    #ulimit -m 1048576 -v 2097152 -n 65000
-        daemon $XROOTD -b -l $XRDLOG -R $XRDUSER -c $XRDCF $XRDDEBUG
-        RETVAL=$?
-        echo
-        [ $RETVAL -eq 0 ] && touch /var/lock/subsys/xrootd
-        return $RETVAL
-}
-
-stop() {
-    [ ! -f /var/lock/subsys/xrootd ] && return 0 || true
-        echo -n $"Stopping $prog: "
-        killproc xrootd
-        RETVAL=$?
-        echo
-        [ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/xrootd
-    return $RETVAL
-}
-
-# See how we were called.
-case "$1" in
-    start)
-        start
-        ;;
-    stop)
-        stop
-        ;;
-    status)
-        status xrootd
-        RETVAL=$?
-        ;;
-    restart|reload)
-        stop
-        start
-        ;;
-    condrestart)
-        if [ -f /var/lock/subsys/xrootd ]; then
-            stop
-            start
-        fi
-        ;;
-    *)
-        echo  $"Usage: $0 {start|stop|status|restart|reload|condrestart}"
-        exit 1
-esac
-
-exit $RETVAL
-EOF
+variable PROOF_STARTUP_CONTENTS ?= file_contents('features/proof/proof_startup.sh');
 
 '/software/components/filecopy/services' = {
-    SELF[escape(PROOF_STARTUP_SCRIPT)] = nlist('config', PROOF_STARTUP_CONTENTS,
+    SELF[escape(PROOF_STARTUP_SCRIPT)] = dict(
+        'config', PROOF_STARTUP_CONTENTS,
         'owner', 'root:root',
-        'perms', '0755');
+        'perms', '0755',
+    );
     SELF;
 };
 
 '/software/components/chkconfig/service' = {
-    SELF[PROOF_SERVICE] = nlist('on', '',
+    SELF[PROOF_SERVICE] = dict(
+        'on', '',
         'startstop', true,
     );
     SELF;
@@ -170,7 +58,7 @@ EOF
 # Create configuration in sysconfig #
 #####################################
 
-include { 'components/sysconfig/config' };
+include 'components/sysconfig/config';
 '/software/components/sysconfig/files/xrootd/XROOTD_DIR' = XROOTD_INSTALLATION_DIR;
 '/software/components/sysconfig/files/xrootd/XROOTD' = XROOTD_DAEMON;
 '/software/components/sysconfig/files/xrootd/XRDUSER' = XROOTD_USER;
@@ -218,7 +106,7 @@ variable PROOF_XROOTD_CONFIG = {
 
         # Add list of worker nodes.
         # It is possible to define number of CPU to use explicitly using
-        # variable PROOF_CORES which is a nlist where keys are worker names.
+        # variable PROOF_CORES which is a dict where keys are worker names.
         # Value can be either positive (number of cores to use) or negative
         # (number of cores reserved).
         contents = contents + "\n";
@@ -261,14 +149,15 @@ variable PROOF_XROOTD_CONFIG = {
 
 '/software/components/filecopy/services' = {
     if ( is_defined(PROOF_XROOTD_CONFIG) ) {
-        SELF[escape(XROOTD_CONFIG_FILE)] = nlist('config', PROOF_XROOTD_CONFIG,
+        SELF[escape(XROOTD_CONFIG_FILE)] = dict('config', PROOF_XROOTD_CONFIG,
             'owner', 'root:root',
             'perms', '0755',
-            'restart', '/sbin/service xrootd restart');
+            'restart', '/sbin/service xrootd restart',
+        );
     };
     SELF;
 };
 
 
 # Must be done at the very end of the configuration
-include { 'features/proof/check-proof-daemons' };
+include 'features/proof/check-proof-daemons';

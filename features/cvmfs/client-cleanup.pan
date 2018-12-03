@@ -31,9 +31,9 @@ variable CVMFS_CLIENT_CLEANUP_SCRIPT_TEMPLATE ?= 'features/cvmfs/script/cvmfs_cl
 #
 # cleanup script
 #
-include {'components/filecopy/config'};
+include 'components/filecopy/config';
 '/software/components/filecopy/services' = {
-    SELF[escape(CVMFS_CLIENT_CLEANUP_SCRIPT)] = nlist(
+    SELF[escape(CVMFS_CLIENT_CLEANUP_SCRIPT)] = dict(
         'config', file_contents(CVMFS_CLIENT_CLEANUP_SCRIPT_TEMPLATE),
         'owner', 'root',
         'perms', '0744',
@@ -60,18 +60,20 @@ variable CVMFS_CLIENT_CLEANUP_QUOTA ?= {
 #
 variable cron_command = {
     this = 'sleep $[ $RANDOM \% ' + to_string(CVMFS_CLIENT_CLEANUP_CRON_SLEEP) + ' ]s;'
-        + 'flock -n /var/lock/cvmfs_client_cleanup.lock '
-        + CVMFS_CLIENT_CLEANUP_SCRIPT + ' '
-        + to_string(CVMFS_CLIENT_CLEANUP_QUOTA) + ' '
-        + to_string(CVMFS_CLIENT_CLEANUP_THRESHOLD) + ' '
-        + to_string(CVMFS_CLIENT_CLEANUP_TARGET);
+    + 'flock -n /var/lock/cvmfs_client_cleanup.lock '
+    + CVMFS_CLIENT_CLEANUP_SCRIPT + ' '
+    + to_string(CVMFS_CLIENT_CLEANUP_QUOTA) + ' '
+    + to_string(CVMFS_CLIENT_CLEANUP_THRESHOLD) + ' '
+    + to_string(CVMFS_CLIENT_CLEANUP_TARGET);
     if (is_string(CVMFS_CACHE_BASE)) {
         this = this + ' ' + CVMFS_CACHE_BASE;
     };
     this;
 };
-include { 'components/cron/config' };
-'/software/components/cron/entries' = append(nlist(
+
+include 'components/cron/config';
+
+'/software/components/cron/entries' = append(dict(
     'name', 'cvmfs-client-cleanup',
     'user', 'root',
     'frequency', CVMFS_CLIENT_CLEANUP_CRON_FRECUENCY,

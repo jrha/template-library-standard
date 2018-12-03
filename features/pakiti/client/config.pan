@@ -2,7 +2,7 @@ unique template features/pakiti/client/config;
 
 variable PAKITI_RPMS ?= if_exists('config/pakiti/client/config');
 variable PAKITI_RPMS ?= 'features/pakiti/client/rpms';
-include { PAKITI_RPMS };
+include PAKITI_RPMS;
 
 # Variables are checked in main config template
 
@@ -14,15 +14,15 @@ variable pakiti_conf = pakiti_conf + format("tag = %s\n", PAKITI_TAG);
 variable PAKITI_CLIENT_INSECURE ?= false;
 variable PAKITI_CLIENT_CONF ?= '/etc/pakiti2/pakiti2-client.conf';
 variable pakiti_conf = if (is_boolean(PAKITI_CLIENT_INSECURE) && PAKITI_CLIENT_INSECURE ) {
-                         SELF + "curl_path = /usr/bin/curl --insecure\n";
-                       } else {
-                         SELF;
-                       };
+    SELF + "curl_path = /usr/bin/curl --insecure\n";
+} else {
+    SELF;
+};
 
-include { "components/filecopy/config" };
+include "components/filecopy/config";
 "/software/components/filecopy/services" = npush(
-    escape(PAKITI_CLIENT_CONF), nlist(
-        "config",pakiti_conf,
-        "perms","0644",
+    escape(PAKITI_CLIENT_CONF), dict(
+        "config", pakiti_conf,
+        "perms", "0644",
     ),
 );

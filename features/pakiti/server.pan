@@ -1,13 +1,13 @@
 unique template features/pakiti/server;
 
 @{
-desc = Pakiti instance descriptive name
-values = string
-default = grid site name if defined, else server domain name
-required = no
+    desc = Pakiti instance descriptive name
+    values = string
+    default = grid site name if defined, else server domain name
+    required = no
 }
 variable PAKITI_TITLE ?= if ( is_defined(SITE_NAME) ) {
-    format("%s Pakiti instance",SITE_NAME);
+    format("%s Pakiti instance", SITE_NAME);
 } else {
     # domain_from_object() requires a valid default domain,
     # even if useless...
@@ -16,43 +16,43 @@ variable PAKITI_TITLE ?= if ( is_defined(SITE_NAME) ) {
 
 
 @{
-desc = Pakiti database host name
-values = string
-default = pakiti
-required = no
+    desc = Pakiti database host name
+    values = string
+    default = pakiti
+    required = no
 }
 variable PAKITI_DB_NAME ?= 'pakiti';
 
 
 @{
-desc = Pakiti database server name
-values = host name
-default = localhost
-required = no
+    desc = Pakiti database server name
+    values = host name
+    default = localhost
+    required = no
 }
 variable PAKITI_DB_HOST ?= 'localhost';
 
 
 @{
-desc = Pakiti database user name
-values = string
-default = pakiti
-required = no
+    desc = Pakiti database user name
+    values = string
+    default = pakiti
+    required = no
 }
 variable PAKITI_DB_USER ?= 'pakiti';
 
 
 @{
-desc = Pakiti database user password
-values = string
-default = none
-required = yes
+    desc = Pakiti database user password
+    values = string
+    default = none
+    required = yes
 }
 variable PAKITI_DB_PASS ?= error('PAKITI_DB_PASS is not defined: no default');
 
 variable PAKITI_AUTH ?= true;
 variable PAKITI_USERS ?= list(
-# '',
+    # '',
 );
 
 variable PAKITI_VIRTUAL_HOST ?= PAKITI_SERVER;
@@ -62,8 +62,8 @@ variable PAKITI_DOCROOT ?= '/var/lib/pakiti2/www';
 variable PAKITI_USERS_FILE ?= '/var/lib/pakiti/users';
 
 
-include { if_exists('config/pakiti/server/config') };
-include { "components/filecopy/config" };
+include if_exists('config/pakiti/server/config');
+include "components/filecopy/config";
 
 # Specific authentification part
 variable CONFIG_AUTH = "";
@@ -90,7 +90,7 @@ variable CONFIG = if ( PAKITI_SERVER_PORT != 443 ) {
     "";
 };
 
-variable CONFIG = CONFIG + format("<VirtualHost %s:%d>\n",PAKITI_VIRTUAL_HOST,PAKITI_SERVER_PORT);
+variable CONFIG = CONFIG + format("<VirtualHost %s:%d>\n", PAKITI_VIRTUAL_HOST, PAKITI_SERVER_PORT);
 variable CONFIG = CONFIG + <<EOF;
 SSLEngine on
 SSLCipherSuite ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+LOW:+SSLv2:+EXP
@@ -110,22 +110,22 @@ variable CONFIG = CONFIG + 'Alias /feed "' + PAKITI_DOCROOT + '/feed"' + "\n";
 
 variable CONFIG = CONFIG + '<Directory "' + PAKITI_DOCROOT + '/feed">' + "\n";
 variable CONFIG = CONFIG + <<EOF;
-    SSLRequireSSL
-    Options -All
-    AllowOverride None
-    DirectoryIndex index.php
+SSLRequireSSL
+Options -All
+AllowOverride None
+DirectoryIndex index.php
 </Directory>
 EOF
 
 variable CONFIG = CONFIG + 'Alias /link "' + PAKITI_DOCROOT + '/link"' + "\n";
 variable CONFIG = CONFIG + '<Directory "' + PAKITI_DOCROOT + '/link">' + "\n";
 variable CONFIG = CONFIG + <<EOF;
-    SSLRequireSSL
-    Options +FollowSymLinks
-    AllowOverride None
-    Order allow,deny
-    Allow from all
-    DirectoryIndex index.php
+SSLRequireSSL
+Options +FollowSymLinks
+AllowOverride None
+Order allow,deny
+Allow from all
+DirectoryIndex index.php
 </Directory>
 EOF
 
@@ -136,47 +136,47 @@ variable CONFIG = if ( PAKITI_AUTH ) {
     CONFIG
 };
 variable CONFIG = CONFIG + <<EOF;
-    # Restrict access to this directory by your own auth mech, authorization can be made by the Pakiti itself
-    SSLRequireSSL
-    Options +FollowSymLinks
-    AllowOverride None
-    Order allow,deny
-    Allow from all
-    DirectoryIndex index.php
+# Restrict access to this directory by your own auth mech, authorization can be made by the Pakiti itself
+SSLRequireSSL
+Options +FollowSymLinks
+AllowOverride None
+Order allow,deny
+Allow from all
+DirectoryIndex index.php
 </Directory>
 
 </VirtualHost>
 EOF
 
-"/software/components/filecopy/services" =
-npush(escape("/etc/httpd/conf.quattor/pakiti.conf"),
-    nlist("config",CONFIG,
-        "perms","0644",'restart', 'service httpd restart')
+"/software/components/filecopy/services/{/etc/httpd/conf.quattor/pakiti.conf}" = dict(
+    "config", CONFIG,
+    "perms", "0644",
+    'restart', 'service httpd restart',
 );
 
-variable CONFIG = {
-    contents = "";
-    ok = first(PAKITI_USERS,key,value);
-    while(ok) {
-        contents = contents + value + ":xxj31ZMTZzkVA\n";
-        ok = next(PAKITI_USERS,key,value);
-    };
-    contents;
-};
-"/software/components/filecopy/services" =
-npush(escape(PAKITI_USERS_FILE),
-    nlist("config",CONFIG,
-        "perms","0644")
-);
+"/software/components/filecopy/services" = npush(escape(PAKITI_USERS_FILE), dict(
+    "config", {
+        contents = "";
+        ok = first(PAKITI_USERS, key, value);
+        while(ok) {
+            contents = contents + value + ":xxj31ZMTZzkVA\n";
+            ok = next(PAKITI_USERS, key, value);
+        };
+        contents;
+    },
+    "perms", "0644",
+));
 
-include { 'components/symlink/config' };
+include 'components/symlink/config';
 
-"/software/components/symlink/links" =
-push(nlist( "name", "/etc/httpd/conf.d/pakiti.conf",
-    "target","/etc/httpd/conf.quattor/pakiti.conf",
-    "replace",  nlist("all","yes","link", "yes")
-    )
-);
+"/software/components/symlink/links" = append(dict(
+    "name", "/etc/httpd/conf.d/pakiti.conf",
+    "target", "/etc/httpd/conf.quattor/pakiti.conf",
+    "replace", dict(
+        "all", "yes",
+        "link", "yes",
+    ),
+));
 
 
 ##
@@ -200,25 +200,23 @@ variable CONFIG = CONFIG + "password = " + PAKITI_DB_PASS + "\n";
 variable CONFIG = CONFIG + "[webinterface]\n";
 variable CONFIG = CONFIG + "# URL of your local Pakiti server\n";
 variable CONFIG = CONFIG + "url = https://" + FULL_HOSTNAME + "\n"
-    + "title = " + PAKITI_TITLE + "\n";
++ "title = " + PAKITI_TITLE + "\n";
 
-"/software/components/filecopy/services" =
-npush(escape("/etc/pakiti2/pakiti2-server.conf"),
-    nlist("config",CONFIG,
-        "owner","apache",
-        "perms","0600"));
+"/software/components/filecopy/services/{/etc/pakiti2/pakiti2-server.conf}" = dict(
+    "config", CONFIG,
+    "owner", "apache",
+    "perms", "0600",
+);
 
-include { 'components/chkconfig/config' };
+include 'components/chkconfig/config';
 "/software/components/chkconfig/service/pakiti2/on" = "";
 "/software/components/chkconfig/service/pakiti2/startstop" = true;
 
 #fix permissions of init script (otherwise, no OVAL update will be done)!
-include { 'components/dirperm/config' };
-"/software/components/dirperm/paths" =
-push(nlist(
+include 'components/dirperm/config';
+"/software/components/dirperm/paths" = append(dict(
     "path", "/etc/init.d/pakiti2",
     "owner", "root:root",
     "perm", "0775",
-    "type", "f"
-    )
-);
+    "type", "f",
+));
